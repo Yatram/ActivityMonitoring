@@ -1,0 +1,174 @@
+---
+title: "Reproducible Research"
+author: "Ruíz Rodríguez Ricardo"
+date: "26/9/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## Loading and preprocessing the data
+
+```{r simulation, echo = TRUE}
+  activity <- read.csv("activity.csv")
+```
+
+
+```{r,  echo = TRUE}
+  str(activity)
+```
+
+```{r , echo = TRUE}
+  summary(activity)
+```
+
+## What is mean total number of steps taken per day?
+
+First load the packages dplyr and ggplot2
+
+```{r, results='hide'}
+  library(dplyr)
+  library(ggplot2)
+```
+
+1.- Calculate the total number of steps taken per day
+
+```{r , echo=TRUE}
+  activity_day <- activity%>%
+  group_by(date)%>%
+  summarise(steps = sum(steps, na.rm = T))
+  head(activity_day)
+```
+
+2.- Make a histogram of the total number of steps taken each day
+
+```{r, echo=TRUE}
+  with(activity_day, ggplot(mapping = aes(steps))+
+       geom_histogram(col='black', fill='green', alpha = 0.4))
+
+```
+
+
+3.-Calculate and report the mean and median of the total number of steps taken per day
+
+Here the variable act_mm_d and act_mmed_d, its represent the  average activity  by day
+
+```{r, echo=TRUE}
+  act_mm_d <- mean(tapply(activity$steps, activity$date, sum), na.rm = T)
+
+  act_mmed_d <- median(tapply(activity$steps, activity$date, sum), na.rm = T)
+
+```
+
+
+## What is the average daily activity pattern?
+
+1.- Make a time series plot of the 5-minute interval and the average number of steps taken, averaged across all days
+
+```{r, echo=TRUE}
+  
+  activity.avgstep <- tapply(activity$steps, activity$interval, mean, na.rm = T)
+
+  plot(activity.avgstep, type = "l", main = "The average steps for intervals of 5 minuts",
+     xlab = "interval of 5 minutes")
+```
+
+
+2.-Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+  First number that we look at here down, is the maximun number of steps for the month octouber and the 
+  second number is the maximun number of steps for the month November
+
+```{r, echo=TRUE}
+  maxstep <- which.max(activity.avgstep)
+  maxstep
+```
+
+## Imputing missing values
+
+1.- Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs.
+
+  I calculated the total number of de registers NAs with the  summary function, we notated that the colum steps is only that contained this values Na.
+  
+```{r, echo=TRUE}
+  summary(activity)
+```
+
+2.- The next part i devise strategy where  i'll switch the values Na by the mean  the 5-minute interval steps.
+
+I do used library Hmisc for switching  the values NA of the colum STEP
+
+```{r, echo=FALSE}
+  library(Hmisc)
+```
+
+I created a copy of activity and change the NA values by the average of the total data. 
+
+```{r, echo=TRUE}
+  activity.copy <- activity
+
+  activity.copy$steps <- impute(activity.copy$steps, mean)
+
+  summary(activity.copy)
+```
+
+
+3.- Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day.
+
+
+```{r, echo=TRUE}
+  activity.copy.total.steps <- activity.copy%>%
+  group_by(date)%>%
+  summarise(total.steps = sum(steps))
+
+  with(activity.copy.total.steps,ggplot(mapping = aes(total.steps))+
+    geom_histogram(col='black', fill='green', alpha = 0.4))
+
+```
+
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+1.- Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+
+I'll use the pakage lubridate to compared the average number steps taken per 5-minute interval across weekdays and weekends
+
+```{r}
+  library(lubridate)
+
+  activity.copy$date <- as.POSIXct(activity.copy$date)
+
+```
+
+
+In this part, i added a colum to the copy data frame, called week, this variable contain the week numbers, for example: wednesday is te number 4, sunday is the number 1, etc  
+
+```{r, echo=TRUE}
+  activity.copy <- mutate(activity,week = wday(activity$date))
+
+  activity.weekdays<-activity.copy%>%
+    filter(week == 2 | week == 3 | week == 4 | week == 5 | week == 6)
+
+  activity.weekends<-activity.copy%>%
+    filter(week == 7 | week == 1)
+```
+
+It calculate mean of the two colums, by the  weekdays and by the weekends.
+
+```{r, echo=TRUE}
+  act.weekday.mean <- tapply(activity.weekdays$steps, activity.weekdays$interval, mean, na.rm = T)
+
+ act.weekend.mean <- tapply(activity.weekends$steps, activity.weekends$interval, mean, na.rm = T)
+```
+
+Created the comparation inter the two histograms
+
+```{r}
+  par(mfrow = c(2,1), mar = c(4,4,2,1))
+
+  plot(act.weekday.mean, type = "l", xlab = "inteval", ylab = "average steps",
+     main = "activity of each weekday")
+
+  plot(act.weekend.mean, type = "l", xlab = "inteval", ylab = "average steps",
+     main = "activity of each weekend")
+```
